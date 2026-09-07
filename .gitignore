@@ -1,0 +1,9 @@
+# Fetched feed cache — regenerated on every run
+cache/
+
+# Generated digest export (`techdash brief`)
+brief-input.md
+
+__pycache__/
+*.py[cod]
+.DS_Store

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>techdash</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="bar-row">
+    <div class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span class="brand-name">techdash</span>
+    </div>
+
+    <div class="search-wrap">
+      <input id="search" type="search" placeholder="Filter everything…  (press / )"
+             autocomplete="off" spellcheck="false" aria-label="Filter items">
+      <button id="clear-search" class="ghost-btn" title="Clear (Esc)" hidden>✕</button>
+    </div>
+
+    <div class="bar-actions">
+      <span id="status" class="status" title="Source health">…</span>
+      <button id="view-toggle" class="ghost-btn" title="Cards / firehose (v)">☰</button>
+      <button id="theme-toggle" class="ghost-btn" title="Light / dark (t)">◐</button>
+      <button id="refresh" class="ghost-btn" title="Refresh now (r)">↻</button>
+    </div>
+  </div>
+
+  <nav id="tabs" class="tabs" aria-label="Sections"></nav>
+
+  <div class="filter-row">
+    <div id="tagbar" class="tagbar" aria-label="Filter by tag"></div>
+    <label class="switch" title="Hide canary / beta / rc builds">
+      <input type="checkbox" id="stable-only" checked>
+      <span>stable only</span>
+    </label>
+    <label class="switch" title="Only items newer than your last visit">
+      <input type="checkbox" id="new-only">
+      <span>new only <b id="new-count" class="pill">0</b></span>
+    </label>
+  </div>
+</header>
+
+<main id="main" aria-live="polite">
+  <p class="empty">Loading feeds…</p>
+</main>
+
+<footer class="footer">
+  <details id="health-details">
+    <summary><span id="health-summary">source health</span></summary>
+    <div id="health" class="health"></div>
+  </details>
+  <p class="keys">
+    <kbd>/</kbd> search · <kbd>1</kbd>–<kbd>8</kbd> tabs · <kbd>r</kbd> refresh ·
+    <kbd>v</kbd> view · <kbd>t</kbd> theme · <kbd>Esc</kbd> clear
+  </p>
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

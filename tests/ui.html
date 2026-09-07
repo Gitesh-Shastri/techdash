@@ -1,0 +1,218 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RUNNING</title>
+<pre id="out">running…</pre>
+<iframe id="f" style="width:1400px;height:900px;border:1px solid #ccc"></iframe>
+<script>
+const results = [];
+const ok = (name, cond, detail = "") => {
+  results.push(`${cond ? "ok  " : "FAIL"} ${name}${cond || !detail ? "" : "  — " + detail}`);
+  document.getElementById("out").textContent = results.join("\n");
+};
+const mark = (where) => {
+  document.getElementById("out").textContent = results.join("\n") + "\n>>> at: " + where;
+};
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(fn, ms = 10000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    try { if (fn()) return true; } catch (e) { /* keep polling */ }
+    await sleep(60);
+  }
+  return false;
+}
+
+const f = document.getElementById("f");
+const D = () => f.contentDocument;
+const W = () => f.contentWindow;
+const $ = (sel) => D().querySelector(sel);
+const $$ = (sel) => [...D().querySelectorAll(sel)];
+const tabNamed = (label) => $$(".tab").find((t) => t.textContent.startsWith(label));
+const evt = (type) => new (W().Event)(type, { bubbles: true });
+const key = (k) => D().dispatchEvent(new (W().KeyboardEvent)("keydown", { key: k, bubbles: true }));
+
+async function run() {
+  mark("landing");
+  // --- landing state -------------------------------------------------
+  localStorage.clear();
+  f.src = "/";
+  await until(() => $$(".tab").length > 5);
+  await until(() => $(".brief-item") || $(".brief-empty"));
+
+  ok("tab bar renders 9 tabs", $$(".tab").length === 9, String($$(".tab").length));
+  ok("lands on Brief by default", tabNamed("Brief")?.getAttribute("aria-selected") === "true");
+  ok("brief headline renders", ($(".brief-head h1")?.textContent || "").length > 20);
+  ok("brief items render", $$(".brief-item").length >= 5, String($$(".brief-item").length));
+  ok("brief items have a why line", $$(".brief-item p").length >= 5);
+  ok("brief items have source links", $$(".brief-links a").length >= 5);
+  ok("brief links open safely",
+     $$(".brief-links a").every((a) => a.target === "_blank" && a.rel.includes("noopener")));
+  ok("brief 'also' section renders", $$(".brief-also li").length >= 3);
+  ok("filter row hidden on Brief", $(".filter-row").hidden === true);
+  ok("fresh brief shows no stale banner", $(".brief-stale") === null);
+  ok("fresh brief meta is not red", !$(".brief-meta")?.classList.contains("stale"));
+  ok("no stale dot on a fresh brief", $(".stale-dot") === null);
+
+  // --- switching to a feed tab ---------------------------------------
+  tabNamed("News").click();
+  await until(() => $$(".card").length > 0);
+  ok("News tab selected", tabNamed("News").getAttribute("aria-selected") === "true");
+  ok("News renders cards", $$(".card").length >= 5, String($$(".card").length));
+  ok("filter row visible again", $(".filter-row").hidden === false);
+  ok("no empty cards", $$(".card").every((c) => c.querySelectorAll(".row").length > 0));
+
+  const first = $(".card");
+  const shown = first.querySelectorAll(".row").length;
+  ok("cards collapse to 5", shown <= 5, `first card shows ${shown}`);
+  const more = first.querySelector(".more-btn");
+  ok("collapsed card offers +N more", more && more.textContent.startsWith("+"),
+     more ? more.textContent : "no button");
+
+  mark("expander");
+  // --- expander -------------------------------------------------------
+  if (more) {
+    more.click();
+    await sleep(150);
+    const after = $(".card").querySelectorAll(".row").length;
+    ok("expander reveals more rows", after > shown, `${shown} -> ${after}`);
+    const less = $(".card").querySelector(".more-btn");
+    ok("expanded card offers show less", less && less.textContent === "show less");
+    if (less) {
+      less.click();
+      await sleep(150);
+      ok("show less re-collapses", $(".card").querySelectorAll(".row").length === shown);
+    }
+  }
+
+  mark("search");
+  // --- search ---------------------------------------------------------
+  const search = D().getElementById("search");
+  search.value = "cloudflare";
+  search.dispatchEvent(evt("input"));
+  await sleep(250);
+  const titles = $$(".row .t").map((n) => n.textContent.toLowerCase());
+  ok("search filters rows", titles.length > 0 && titles.length < 200, String(titles.length));
+  ok("search auto-expands cards (no +N more, no dead show-less)",
+     $$(".card .more-btn").length === 0);
+  ok("every surviving row matches the query (title, summary, or its source)",
+     $$(".card").length > 0 && $$(".card").every((card) => {
+       const src = card.querySelector(".card-head h3").textContent.toLowerCase();
+       return [...card.querySelectorAll(".row")]
+         .every((r) => r.textContent.toLowerCase().includes("cloudflare") || src.includes("cloudflare"));
+     }));
+
+  ok("no collapse control offered while filtering",
+     $$(".card .more-btn").filter((b) => b.textContent === "show less").length === 0);
+
+  key("Escape");
+  await sleep(200);
+  ok("Escape clears the search", D().getElementById("search").value === "");
+  await sleep(150);
+  ok("collapse returns after clearing the search", $$(".card .more-btn").length > 0);
+
+  mark("tag chips");
+  // --- tag chips ------------------------------------------------------
+  const chip = $$(".chip").find((c) => c.textContent.startsWith("infra"));
+  if (chip) {
+    chip.click();
+    await sleep(200);
+    const pressed = $$(".chip").find((c) => c.textContent.startsWith("infra"));
+    ok("tag chip is pressed", pressed?.getAttribute("aria-pressed") === "true");
+    ok("tag chip filters to that tag",
+       $$(".row .sub .tag").every((n) => n.textContent === "infra"));
+    chip.click();
+    await sleep(150);
+  } else {
+    ok("tag chip present", false, "no infra chip");
+  }
+
+  mark("stable-only");
+  // --- stable-only toggle ---------------------------------------------
+  tabNamed("Releases").click();
+  await until(() => $$(".card").length > 0);
+  const stableCount = Number(tabNamed("Releases").querySelector(".pill").textContent);
+  const stable = D().getElementById("stable-only");
+  stable.checked = false;
+  stable.dispatchEvent(evt("change"));
+  await sleep(250);
+  const allCount = Number(tabNamed("Releases").querySelector(".pill").textContent);
+  ok("stable-only hides prereleases", allCount > stableCount, `${stableCount} -> ${allCount}`);
+  ok("prerelease badges appear when unfiltered", $$(".pre-badge").length > 0);
+  stable.checked = true;
+  stable.dispatchEvent(evt("change"));
+  await sleep(200);
+  ok("re-enabling stable-only hides them again", $$(".pre-badge").length === 0);
+
+  mark("market tiles");
+  // --- market tiles ----------------------------------------------------
+  tabNamed("Market").click();
+  await until(() => $(".tickers"));
+  const tiles = $$(".tile");
+  ok("market renders ticker tiles", tiles.length >= 10, String(tiles.length));
+  ok("tiles carry an arrow, not colour alone",
+     tiles.every((t) => /[▲▼▪]/.test(t.querySelector(".chg").textContent)));
+  ok("tiles keep registry order",
+     tiles[0].querySelector(".sym").textContent === "NVDA", tiles[0]?.querySelector(".sym")?.textContent);
+
+  mark("view toggle + keyboard");
+  // --- view toggle + keyboard -----------------------------------------
+  key("v");
+  await until(() => $(".firehose"));
+  ok("v switches to firehose", $(".firehose") !== null);
+  ok("firehose groups by day", $$(".daybreak").length > 0);
+  ok("firehose drops tickers", $$(".firehose .row .src").every((n) => n.textContent !== "Tech Tickers"));
+  key("v");
+  await until(() => $(".grid"));
+  ok("v switches back to cards", $(".grid") !== null);
+
+  const themeBefore = D().documentElement.dataset.theme;
+  key("t");
+  await sleep(150);
+  ok("t toggles the theme", D().documentElement.dataset.theme !== themeBefore,
+     `${themeBefore} -> ${D().documentElement.dataset.theme}`);
+  key("t");
+  await sleep(150);
+
+  key("3");
+  await sleep(250);
+  ok("number key switches tab", tabNamed("Pulse").getAttribute("aria-selected") === "true");
+
+  key("/");
+  await sleep(150);
+  ok("slash focuses the search box", D().activeElement === D().getElementById("search"));
+  D().getElementById("search").blur();
+
+  mark("deep link");
+  // --- deep link -------------------------------------------------------
+  // The iframe load event never fires under Chrome's virtual clock, so stamp
+  // the current document and poll until an unstamped one replaces it.
+  W().location.hash = "#releases";
+  await sleep(400);
+  ok("editing the hash on a live page switches tab",
+     tabNamed("Releases")?.getAttribute("aria-selected") === "true");
+
+  D().body.dataset.stale = "1";
+  f.src = "/index.html#market";
+  await until(() => D()?.body && !D().body.dataset.stale && $$(".tab").length > 5);
+  await until(() => $(".tickers"));
+  ok("hash deep-links on a fresh load",
+     tabNamed("Market")?.getAttribute("aria-selected") === "true");
+
+  mark("health strip");
+  // --- health strip ----------------------------------------------------
+  ok("health strip lists every source", $$("#health div").length >= 120, String($$("#health div").length));
+  ok("health summary reports live count", /\d+\/\d+ live/.test($("#health-summary").textContent));
+  ok("status shows live sources", /\d+\/\d+ live/.test($("#status").textContent));
+
+  document.getElementById("out").textContent = results.join("\n");
+  const failed = results.filter((r) => r.startsWith("FAIL")).length;
+  document.title = `DONE ${results.length - failed}/${results.length}`;
+}
+
+run().catch((e) => {
+  document.getElementById("out").textContent =
+    results.join("\n") + "\nFAIL harness crashed — " + (e && e.stack || e);
+  document.title = "DONE crashed";
+});
+</script>
