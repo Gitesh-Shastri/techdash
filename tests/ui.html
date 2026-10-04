@@ -40,7 +40,7 @@ async function run() {
   await until(() => $$(".tab").length > 5);
   await until(() => $(".brief-item") || $(".brief-empty"));
 
-  ok("tab bar renders 9 tabs", $$(".tab").length === 9, String($$(".tab").length));
+  ok("tab bar renders 10 tabs", $$(".tab").length === 10, String($$(".tab").length));
   ok("lands on Brief by default", tabNamed("Brief")?.getAttribute("aria-selected") === "true");
   ok("brief headline renders", ($(".brief-head h1")?.textContent || "").length > 20);
   ok("brief items render", $$(".brief-item").length >= 5, String($$(".brief-item").length));

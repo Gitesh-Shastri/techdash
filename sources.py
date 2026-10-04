@@ -25,6 +25,7 @@ SECTIONS = [
     ("releases", "Releases", "New versions of the things you actually build with"),
     ("libs", "New Libs", "Freshly published packages and rising repos"),
     ("ai", "AI & MCP", "Model releases, MCP ecosystem, prompting, papers"),
+    ("agents", "Claude & Agents", "Claude Code, skills, plugins, Codex, and the coding-agent field"),
     ("community", "Community", "Forums, newsletters, and practitioner writing"),
 ]
 
@@ -104,8 +105,6 @@ STACK_REPOS = [
     ("langchain-ai/langchain", "LangChain", "ai"),
     ("run-llama/llama_index", "LlamaIndex", "ai"),
     ("vllm-project/vllm", "vLLM", "ai"),
-    ("anthropics/claude-code", "Claude Code", "ai"),
-    ("anthropics/anthropic-sdk-python", "Anthropic SDK", "ai"),
     ("openai/openai-python", "OpenAI SDK", "ai"),
 ]
 
@@ -122,6 +121,44 @@ _RELEASES = [
         limit=8,
     )
     for repo, label, tag in STACK_REPOS
+]
+
+
+# --------------------------------------------------------------------------
+# Claude & coding agents. Same releases.atom shape as the stack, but they get
+# their own tab: this is the tooling the reader drives every day, and it moves
+# weekly. Ids keep the rel- prefix so moving a repo between lists keeps its cache.
+# --------------------------------------------------------------------------
+
+AGENT_REPOS = [
+    # anthropic
+    ("anthropics/claude-code", "Claude Code", "claude"),
+    ("anthropics/claude-agent-sdk-python", "Claude Agent SDK (py)", "claude"),
+    ("anthropics/claude-agent-sdk-typescript", "Claude Agent SDK (ts)", "claude"),
+    ("anthropics/anthropic-sdk-python", "Anthropic SDK", "claude"),
+    ("anthropics/anthropic-sdk-typescript", "Anthropic SDK (ts)", "claude"),
+    # the rest of the field
+    ("openai/codex", "Codex CLI", "agents"),
+    ("openai/openai-agents-python", "OpenAI Agents SDK", "agents"),
+    ("google-gemini/gemini-cli", "Gemini CLI", "agents"),
+    ("sst/opencode", "opencode", "agents"),
+    ("cline/cline", "Cline", "agents"),
+    ("Aider-AI/aider", "Aider", "agents"),
+    ("github/github-mcp-server", "GitHub MCP Server", "mcp"),
+    ("modelcontextprotocol/registry", "MCP Registry (server)", "mcp"),
+]
+
+_AGENT_RELEASES = [
+    Source(
+        id=f"rel-{repo.replace('/', '-').replace('.', '-').lower()}",
+        name=label,
+        section="agents",
+        url=f"https://github.com/{repo}/releases.atom",
+        tag=tag,
+        ttl=3600,
+        limit=8,
+    )
+    for repo, label, tag in AGENT_REPOS
 ]
 
 
@@ -218,6 +255,40 @@ _FEEDS = [
     Source("simonw", "Simon Willison", "ai", "https://simonwillison.net/atom/everything/", ttl=3600, tag="prompt", limit=15),
     Source("latentspace", "Latent Space", "ai", "https://www.latent.space/feed", ttl=21600, tag="ai", limit=8),
 
+    # ---- claude & agents -------------------------------------------------
+    # Anthropic publishes no RSS; Olshansk/rss-feeds scrapes the site hourly.
+    Source("anthropic-news", "Anthropic News", "agents",
+           "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml",
+           ttl=3600, tag="claude", limit=12),
+    Source("anthropic-eng", "Anthropic Engineering", "agents",
+           "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml",
+           ttl=21600, tag="claude", limit=8),
+    Source("anthropic-research", "Anthropic Research", "agents",
+           "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml",
+           ttl=21600, tag="claude", limit=8),
+    # The changelog lands in the repo before the release is cut.
+    Source("cc-changelog", "Claude Code CHANGELOG", "agents",
+           "https://github.com/anthropics/claude-code/commits/main/CHANGELOG.md.atom",
+           ttl=3600, tag="claude", limit=10),
+    Source("claude-skills", "Anthropic Skills repo", "agents",
+           "https://github.com/anthropics/skills/commits/main.atom", ttl=7200, tag="claude", limit=10),
+    Source("claude-plugins", "Claude Plugins (official)", "agents",
+           "https://github.com/anthropics/claude-plugins-official/commits/main.atom",
+           ttl=7200, tag="claude", limit=10),
+    Source("codex-changelog", "ChatGPT & Codex changelog", "agents",
+           "https://developers.openai.com/codex/changelog/rss.xml", ttl=3600, tag="agents", limit=12),
+    Source("cursor-changelog", "Cursor Changelog", "agents",
+           "https://cursor.com/changelog/rss.xml", ttl=7200, tag="agents", limit=8),
+    Source("cursor-blog", "Cursor Blog", "agents",
+           "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_cursor.xml",
+           ttl=21600, tag="agents", limit=6),
+    Source("hn-claude", "HN — Claude", "agents",
+           "https://hn.algolia.com/api/v1/search_by_date?query=Claude&tags=story&hitsPerPage=20",
+           kind="json", parser="hn", ttl=3600, tag="claude"),
+    Source("hn-codex", "HN — Codex", "agents",
+           "https://hn.algolia.com/api/v1/search_by_date?query=Codex&tags=story&hitsPerPage=20",
+           kind="json", parser="hn", ttl=3600, tag="agents"),
+
     # ---- community -------------------------------------------------------
     Source("devto", "dev.to", "community", "https://dev.to/feed", ttl=3600, tag="devto"),
 
@@ -299,7 +370,7 @@ _REDDIT = [
     ]
 ] if REDDIT_ENABLED else []
 
-SOURCES = _FEEDS + _RELEASES + _REDDIT
+SOURCES = _FEEDS + _RELEASES + _AGENT_RELEASES + _REDDIT
 
 BY_ID = {s.id: s for s in SOURCES}
 

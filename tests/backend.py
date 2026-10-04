@@ -148,7 +148,7 @@ code, body, _ = get("/api/data")
 data = json.loads(body)
 check("GET /api/data 200", code == 200)
 check("/api/data has items", len(data["items"]) > 500, str(len(data["items"])))
-check("/api/data sections", len(data["sections"]) == 7)
+check("/api/data sections", len(data["sections"]) == 8)
 check("/api/data health covers registry", len(data["health"]) == len(s.SOURCES))
 check("/api/data items sorted newest-first",
       all((a.get("ts") or 0) >= (b.get("ts") or 0) for a, b in zip(data["items"], data["items"][1:])))
