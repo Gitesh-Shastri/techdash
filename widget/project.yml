@@ -27,6 +27,8 @@ targets:
       path: App/Info.plist
       properties:
         LSUIElement: true
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleDisplayName: Techdash
         CFBundleURLTypes:
           - CFBundleURLName: com.giteshshastri.techdash
@@ -43,6 +45,8 @@ targets:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: Tech Brief
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
         NSAppTransportSecurity:

@@ -4,12 +4,21 @@
 // launch anything, so its buttons are techdash:// links that the host app
 // (the menu bar app) handles: open starts the server, write runs /brief.
 
+import AppIntents
 import SwiftUI
 import WidgetKit
+
+/// The ↻ button. Doing nothing is the point: WidgetKit reloads the timeline
+/// after any widget intent runs, which re-fetches the brief.
+struct RefreshBriefIntent: AppIntent {
+    static var title: LocalizedStringResource = "Refresh brief"
+    func perform() async throws -> some IntentResult { .result() }
+}
 
 struct BriefLink: Decodable { let src: String?; let url: String? }
 struct BriefItem: Decodable, Identifiable {
     let title: String
+    let why: String?
     let tag: String?
     let links: [BriefLink]?
     var id: String { title }
@@ -34,8 +43,8 @@ struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> BriefEntry {
         BriefEntry(date: .now, brief: Brief(
             headline: "A quiet day: one release worth installing, one worth reading about.",
-            items: [BriefItem(title: "Claude Code ships a new version", tag: "claude", links: nil),
-                    BriefItem(title: "Ollama runs on MLX by default", tag: "ai", links: nil)],
+            items: [BriefItem(title: "Claude Code ships a new version", why: nil, tag: "claude", links: nil),
+                    BriefItem(title: "Ollama runs on MLX by default", why: nil, tag: "ai", links: nil)],
             built_at: nil), offline: false)
     }
 
@@ -71,9 +80,10 @@ let tagColors: [String: Color] = [
 
 struct TagChip: View {
     let tag: String
+    var size: CGFloat = 8
     var body: some View {
         Text(tag.uppercased())
-            .font(.system(size: 8, weight: .bold))
+            .font(.system(size: size, weight: .bold))
             .padding(.horizontal, 4).padding(.vertical, 1.5)
             .background((tagColors[tag] ?? .gray).opacity(0.25), in: RoundedRectangle(cornerRadius: 3))
             .foregroundStyle(tagColors[tag] ?? .gray)
@@ -86,19 +96,24 @@ struct TechdashWidgetView: View {
 
     var maxItems: Int {
         switch family {
-        case .systemExtraLarge: 10
+        case .systemExtraLarge: 7
         case .systemLarge: 7
         case .systemMedium: 3
         default: 0
         }
     }
 
+    /// Extra large has room for the "why" line under each title, at a bigger size.
+    var roomy: Bool { family == .systemExtraLarge }
+    var headlineSize: CGFloat { roomy ? 17 : (family == .systemSmall ? 12 : 13) }
+    var titleSize: CGFloat { roomy ? 14 : 11.5 }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: roomy ? 9 : 6) {
             header
             if let brief = entry.brief, let headline = brief.headline {
                 Text(headline)
-                    .font(.system(size: family == .systemSmall ? 12 : 13, weight: .semibold))
+                    .font(.system(size: headlineSize, weight: .semibold))
                     .lineLimit(family == .systemSmall ? 6 : 3)
                 if maxItems > 0 {
                     Divider().opacity(0.4)
@@ -126,19 +141,31 @@ struct TechdashWidgetView: View {
             Image(systemName: "newspaper.fill").foregroundStyle(.orange)
             Text("TECH BRIEF").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
             Spacer()
-            if let built = entry.brief?.built_at {
+            if let built = entry.brief?.built_at, family != .systemSmall {
                 Text(Date(timeIntervalSince1970: built), style: .relative)
                     .font(.system(size: 10)).foregroundStyle(.secondary)
                     .multilineTextAlignment(.trailing)
             }
+            Button(intent: RefreshBriefIntent()) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Refresh")
         }
     }
 
     @ViewBuilder
     func row(_ item: BriefItem) -> some View {
-        let content = HStack(alignment: .firstTextBaseline, spacing: 6) {
-            TagChip(tag: item.tag ?? "news").frame(width: 46, alignment: .leading)
-            Text(item.title).font(.system(size: 11.5)).lineLimit(family == .systemExtraLarge ? 2 : 1)
+        let content = HStack(alignment: .firstTextBaseline, spacing: 8) {
+            TagChip(tag: item.tag ?? "news", size: roomy ? 9 : 8).frame(width: roomy ? 58 : 50, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title).font(.system(size: titleSize, weight: roomy ? .medium : .regular)).lineLimit(1)
+                if roomy, let why = item.why {
+                    Text(why).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
         }
         if let url = item.firstURL { Link(destination: url) { content } } else { content }
     }
@@ -152,6 +179,7 @@ struct TechdashWidgetView: View {
                 Label("New brief", systemImage: "sparkles")
             }
             Spacer()
+            Text("checked \(entry.date.formatted(date: .omitted, time: .shortened))")
         }
         .font(.system(size: 10, weight: .medium))
         .foregroundStyle(.secondary)

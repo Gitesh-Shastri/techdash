@@ -14,7 +14,8 @@ mkdir -p "$HOME/Applications" "$HOME/techdash/cache"
 cd "$HERE"
 xcodegen -q
 xcodebuild -project Techdash.xcodeproj -scheme Techdash -configuration Release \
-  -derivedDataPath "$BUILD" -quiet build
+  -derivedDataPath "$BUILD" -quiet build \
+  CURRENT_PROJECT_VERSION="$(date +%s)"   # new build number, or chronod keeps the cached widget
 
 pkill -x Techdash 2>/dev/null || true
 pkill -x TechdashBar 2>/dev/null || true
