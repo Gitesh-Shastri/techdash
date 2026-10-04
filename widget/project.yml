@@ -1,0 +1,57 @@
+# xcodegen spec: `xcodegen` here regenerates Techdash.xcodeproj (build.sh does it).
+name: Techdash
+options:
+  bundleIdPrefix: com.giteshshastri
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    # Team-signed: chronod ignores ad-hoc-signed widget extensions. Manual signing
+    # with the personal Apple Development cert; sandbox + network.client need no
+    # provisioning profile on macOS, so no Apple login is needed at build time.
+    DEVELOPMENT_TEAM: 7A655WYLTZ   # Gitesh Shastri (personal)
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "Apple Development"
+    PROVISIONING_PROFILE_SPECIFIER: ""
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Techdash:
+    type: application
+    platform: macOS
+    sources: [App]
+    dependencies:
+      - target: TechdashWidget
+    info:
+      path: App/Info.plist
+      properties:
+        LSUIElement: true
+        CFBundleDisplayName: Techdash
+        CFBundleURLTypes:
+          - CFBundleURLName: com.giteshshastri.techdash
+            CFBundleURLSchemes: [techdash]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.giteshshastri.techdash
+        ENABLE_HARDENED_RUNTIME: NO
+  TechdashWidget:
+    type: app-extension
+    platform: macOS
+    sources: [Widget]
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: Tech Brief
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    entitlements:
+      path: Widget/TechdashWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.giteshshastri.techdash.widget

@@ -1,0 +1,5 @@
+build/
+Techdash.xcodeproj/
+App/Info.plist
+Widget/Info.plist
+Widget/*.entitlements

@@ -179,3 +179,18 @@ tests/           backend.py, ui.html, run.sh
 
 ~/.claude/commands/brief.md   the /brief slash command + editorial instructions
 ```
+
+## Desktop widget + menu bar app
+
+`./widget/build.sh` (needs Xcode and `brew install xcodegen`) builds
+`~/Applications/Techdash.app` and adds a login item (`--no-login` to skip).
+
+- **Desktop widget "Tech Brief"**: right-click the desktop > Edit Widgets >
+  search "Tech Brief". Small/medium/large/extra-large; shows the headline and
+  items, click an item for its source, **Dashboard** and **New brief** buttons.
+- **Menu bar icon**: the same brief as a menu, plus Write new brief (⌘B).
+
+The widget is sandboxed, so its buttons are `techdash://open` / `techdash://write`
+links handled by the app, which starts the server and runs `claude -p /brief`.
+Logs: `cache/widget.log`. Remove: delete the app and
+`~/Library/LaunchAgents/com.techdash.widget.plist`.
