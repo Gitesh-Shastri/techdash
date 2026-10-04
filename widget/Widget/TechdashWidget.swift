@@ -38,6 +38,7 @@ struct BriefEntry: TimelineEntry {
 
 let openURL = URL(string: "techdash://open")!
 let writeURL = URL(string: "techdash://write")!
+let desktopURL = URL(string: "techdash://desktop")!
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> BriefEntry {
@@ -96,7 +97,7 @@ struct TechdashWidgetView: View {
 
     var maxItems: Int {
         switch family {
-        case .systemExtraLarge: 7
+        case .systemExtraLarge: 5   // with a "why" line each; 7 overflowed the header and footer off
         case .systemLarge: 7
         case .systemMedium: 3
         default: 0
@@ -114,12 +115,18 @@ struct TechdashWidgetView: View {
             if let brief = entry.brief, let headline = brief.headline {
                 Text(headline)
                     .font(.system(size: headlineSize, weight: .semibold))
-                    .lineLimit(family == .systemSmall ? 6 : 3)
+                    .lineLimit(family == .systemSmall ? 6 : (roomy ? 2 : 3))
                 if maxItems > 0 {
                     Divider().opacity(0.4)
-                    ForEach((brief.items ?? []).prefix(maxItems)) { item in
-                        row(item)
+                    // Rows give way first, so the header and footer always fit.
+                    VStack(alignment: .leading, spacing: roomy ? 9 : 6) {
+                        ForEach((brief.items ?? []).prefix(maxItems)) { item in
+                            row(item)
+                        }
                     }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .clipped()
+                    .layoutPriority(-1)
                 }
                 Spacer(minLength: 0)
                 if family != .systemSmall { footer }
@@ -177,6 +184,9 @@ struct TechdashWidgetView: View {
             }
             Link(destination: writeURL) {
                 Label("New brief", systemImage: "sparkles")
+            }
+            Link(destination: desktopURL) {
+                Label("Full screen", systemImage: "arrow.up.left.and.arrow.down.right")
             }
             Spacer()
             Text("checked \(entry.date.formatted(date: .omitted, time: .shortened))")

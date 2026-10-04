@@ -27,6 +27,8 @@ targets:
       path: App/Info.plist
       properties:
         LSUIElement: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleDisplayName: Techdash

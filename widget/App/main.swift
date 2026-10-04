@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var serverUp = false
     var writing = false
     var lastError: String?
+    lazy var board = DesktopBoard(url: URL(string: baseURL)!)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setIcon()
@@ -62,14 +63,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rebuildMenu()
         ensureServer()
         Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in self?.fetchBrief() }
+        board.onHide = { [weak self] in self?.rebuildMenu() }
+        if UserDefaults.standard.bool(forKey: DesktopBoard.defaultsKey) { board.show() }
     }
 
     /// techdash://open starts the server if needed and opens the dashboard;
-    /// techdash://write writes a new brief. Both arrive from the widget.
+    /// techdash://write writes a new brief; techdash://desktop toggles the
+    /// full-screen board. All arrive from the widget.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls where url.scheme == "techdash" {
             switch url.host {
             case "write": writeBrief()
+            case "desktop": toggleBoard()
             default:
                 ping { [weak self] up in
                     if up { self?.openDashboard() } else { self?.ensureServer(thenOpen: true) }
@@ -148,6 +153,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: actions
 
+    @objc func toggleBoard() {
+        board.toggle()
+        rebuildMenu()
+    }
+
     @objc func openDashboard() { NSWorkspace.shared.open(URL(string: baseURL)!) }
     @objc func reload() { serverUp ? fetchBrief() : ensureServer() }
     @objc func openLink(_ sender: NSMenuItem) {
@@ -169,6 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if status != 0 { self.lastError = "brief failed (exit \(status)) — see log" }
             self.fetchBrief()
             WidgetCenter.shared.reloadAllTimelines()
+            self.board.reload()
             self.notify(status == 0 ? "New brief is ready" : "Brief failed — see cache/widget.log")
         }
     }
@@ -253,6 +264,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(action(writing ? "Writing brief…" : "Write new brief", #selector(writeBrief),
                             key: "b", enabled: !writing && serverUp))
         menu.addItem(action("Open dashboard", #selector(openDashboard), key: "d", enabled: serverUp))
+        let boardItem = action("Dashboard on desktop", #selector(toggleBoard), key: "f")
+        boardItem.state = board.isVisible ? .on : .off
+        menu.addItem(boardItem)
         menu.addItem(action(serverUp ? "Reload" : "Start techdash", #selector(reload), key: "r"))
         menu.addItem(action("Show log", #selector(openLog)))
         menu.addItem(.separator())
